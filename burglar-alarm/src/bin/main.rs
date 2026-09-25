@@ -7,13 +7,15 @@
 )]
 #![deny(clippy::large_stack_frames)]
 
+use defmt::{error, info};
+use esp_hal::clock::CpuClock;
+use esp_hal::gpio::{Input, InputConfig, Level, Output, OutputConfig, Pull};
+use esp_hal::main;
+use esp_hal::time::{Duration, Instant};
 use esp_println as _;
 
-use defmt::error;
-use esp_hal::main;
 use esp_hal::rmt::Rmt;
 use esp_hal::time::Rate;
-use esp_hal::{clock::CpuClock, delay::Delay};
 use esp_hal_smartled::{RmtSmartLeds, buffer_size, color_order};
 use smart_leds::{RGB8, SmartLedsWrite};
 
@@ -34,15 +36,20 @@ esp_bootloader_esp_idf::esp_app_desc!();
 #[main]
 fn main() -> ! {
     // generator version: 1.4.0
-    // generator parameters: -o esp32c5 -o defmt -o vscode
+    // generator parameters: -o esp32c5 -o defmt -o esp32c5-wroom-1-psram -o vscode
 
     let config = esp_hal::Config::default().with_cpu_clock(CpuClock::max());
     let peripherals = esp_hal::init(config);
 
+    let sensor_pin = Input::new(
+        peripherals.GPIO10,
+        InputConfig::default().with_pull(Pull::Down),
+    );
+
+    let mut buzzer_pin = Output::new(peripherals.GPIO24, Level::Low, OutputConfig::default());
+
     let freq = Rate::from_mhz(80);
-
     let rmt = Rmt::new(peripherals.RMT, freq).unwrap();
-
     let mut led =
         RmtSmartLeds::<{ buffer_size::<RGB8>(1) }, _, RGB8, color_order::Rgb>::new_with_memsize(
             esp_hal_smartled::WS2812_TIMING,
@@ -53,18 +60,24 @@ fn main() -> ! {
         )
         .unwrap();
 
-    let delay = Delay::new();
-
+    info!("Monitoring...");
     loop {
-        led.write([RGB8::new(255, 0, 0)]).unwrap();
-        delay.delay_millis(500);
+        if sensor_pin.is_high() {
+            info!("Motion detected");
+            buzzer_pin.set_high();
+            led.write([RGB8::new(255, 0, 0)]).unwrap();
+        } else {
+            buzzer_pin.set_low();
+            led.write([RGB8::new(0, 0, 0)]).unwrap();
+        }
 
-        led.write([RGB8::new(0, 255, 0)]).unwrap();
-        delay.delay_millis(500);
-
-        led.write([RGB8::new(0, 0, 255)]).unwrap();
-        delay.delay_millis(500);
+        blocking_delay(Duration::from_millis(100));
     }
 
     // for inspiration have a look at the examples at https://github.com/esp-rs/esp-hal/tree/esp-hal-v1.2.2/examples
+}
+
+fn blocking_delay(duration: Duration) {
+    let delay_start = Instant::now();
+    while delay_start.elapsed() < duration {}
 }
