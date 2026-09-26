@@ -55,12 +55,12 @@ async fn main(spawner: Spawner) -> ! {
     let wifi_stack = access_website::wifi::init_wifi(spawner, peripherals.WIFI).await;
     info!("Wi-Fi Initialized");
 
-    Timer::after(Duration::from_millis(1000)).await;
+    Timer::after(Duration::from_secs(1)).await;
 
     send_http_request(wifi_stack).await;
 
     loop {
-        Timer::after(Duration::from_millis(3000)).await;
+        Timer::after(Duration::from_secs(3)).await;
     }
 
     // for inspiration have a look at the examples at https://github.com/esp-rs/esp-hal/tree/esp-hal-v1.2.2/examples
