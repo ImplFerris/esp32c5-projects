@@ -66,11 +66,10 @@ pub async fn init_wifi(spawner: Spawner, wifi_peripheral: WIFI<'static>) -> Stac
 fn set_dns_servers(stack: Stack<'static>) {
     // Custom DNS Servers
     if let Some(mut cfg) = stack.config_v4() {
-        cfg.dns_servers = heapless::Vec::from_slice(&[
+        cfg.dns_servers.copy_from_slice(&[
             embassy_net::Ipv4Address::new(1, 1, 1, 1),
             embassy_net::Ipv4Address::new(8, 8, 8, 8),
-        ])
-        .expect("DNS server list exceeds heapless::Vec capacity");
+        ]);
 
         stack.set_config_v4(embassy_net::ConfigV4::Static(cfg));
         info!("Overrode DNS servers, keeping DHCP address/gateway");
