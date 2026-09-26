@@ -4,7 +4,6 @@ use embassy_net::{Runner, Stack, StackResources};
 use embassy_time::{Duration, Timer};
 use esp_hal::peripherals::WIFI;
 use esp_hal::rng::Rng;
-use esp_radio::wifi::scan::ScanConfig;
 use esp_radio::wifi::sta::StationConfig;
 use esp_radio::wifi::{self, AuthenticationMethodConfig, Interface, WifiController};
 
@@ -22,32 +21,23 @@ pub async fn init_wifi(spawner: Spawner, wifi_peripheral: WIFI<'static>) -> Stac
             )),
     );
 
-    let mut controller = esp_radio::wifi::WifiController::new(
+    let controller = esp_radio::wifi::WifiController::new(
         wifi_peripheral,
         wifi::ControllerConfig::default().with_initial_config(station_config),
     )
     .expect("Failed to initialize Wi-Fi controller");
-    let wifi_interface = esp_radio::wifi::Interface::station();
-
-    let config = embassy_net::Config::dhcpv4(Default::default());
-
-    let rng = Rng::new();
-    let seed = (rng.random() as u64) << 32 | rng.random() as u64;
 
     // Init network stack
+    let rng = Rng::new();
+    let seed = (rng.random() as u64) << 32 | rng.random() as u64;
+    let config = embassy_net::Config::dhcpv4(Default::default());
+    let wifi_interface = esp_radio::wifi::Interface::station();
     let (stack, runner) = embassy_net::new(
         wifi_interface,
         config,
         mk_static!(StackResources<3>, StackResources::<3>::new()),
         seed,
     );
-
-    info!("Scan");
-    let scan_config = ScanConfig::default().with_max(10);
-    let result = controller.scan_async(&scan_config).await.unwrap();
-    for ap in result {
-        info!("{:?}", ap);
-    }
 
     spawner.spawn(connection(controller).unwrap());
     spawner.spawn(net_task(runner).unwrap());
