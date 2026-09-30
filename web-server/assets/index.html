@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>impl Rust</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+
+            background: #0b1120;
+            color: #e5e7eb;
+        }
+
+        .page {
+            width: min(700px, 90%);
+            text-align: center;
+        }
+
+        img {
+            width: 180px;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: clamp(3rem, 10vw, 5.5rem);
+            letter-spacing: -0.05em;
+            color: #f97316;
+        }
+
+        h1 span {
+            color: #e5e7eb;
+        }
+
+        p {
+            margin: 18px 0 0;
+            color: #94a3b8;
+            font-size: 1rem;
+        }
+
+        .status {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+
+            margin-top: 35px;
+            padding: 9px 15px;
+
+            border: 1px solid #26344d;
+            border-radius: 999px;
+
+            background: #111a2e;
+            color: #cbd5e1;
+
+            font-size: 0.85rem;
+        }
+
+        .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #22c55e;
+        }
+    </style>
+</head>
+
+<body>
+
+    <main class="page">
+
+        <img src="/logo.svg" alt="Ferris, the Rust mascot">
+
+        <h1><span>impl</span> Rust</h1>
+
+        <h2>Running on ESP32-C5</h2>
+
+        <div class="status">
+            <span class="dot"></span>
+            Online
+        </div>
+
+    </main>
+
+</body>
+
+</html>
