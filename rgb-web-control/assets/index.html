@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>impl Rust</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background: #0b1120;
+            color: #e5e7eb;
+        }
+
+        .page {
+            width: min(430px, 92%);
+            text-align: center;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: clamp(3rem, 10vw, 5rem);
+            letter-spacing: -0.05em;
+            color: #f97316;
+        }
+
+        h1 span {
+            color: #e5e7eb;
+        }
+
+        .subtitle {
+            margin: 8px 0 28px;
+            color: #94a3b8;
+            font-size: 1rem;
+        }
+
+        .card {
+            padding: 28px;
+            background: #1b1e25;
+            border: 1px solid #2b2f38;
+            border-radius: 24px;
+            text-align: left;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+        }
+
+        .card h2 {
+            margin: 0 0 22px;
+            text-align: center;
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+
+        .palette {
+            position: relative;
+            width: 100%;
+            height: 260px;
+            border-radius: 16px;
+            overflow: hidden;
+            cursor: crosshair;
+
+            background:
+                linear-gradient(to top, #000, transparent),
+                linear-gradient(to right, #fff, hsl(0 100% 50%));
+        }
+
+        .pointer {
+            position: absolute;
+            width: 22px;
+            height: 22px;
+            border: 3px solid white;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.35);
+            pointer-events: none;
+        }
+
+        .hue {
+            position: relative;
+            height: 18px;
+            margin-top: 18px;
+            border-radius: 999px;
+            cursor: pointer;
+            background: linear-gradient(to right,
+                    #ff0000,
+                    #ffff00,
+                    #00ff00,
+                    #00ffff,
+                    #0000ff,
+                    #ff00ff,
+                    #ff0000);
+        }
+
+        .hue-pointer {
+            position: absolute;
+            top: 50%;
+            left: 0;
+            width: 24px;
+            height: 24px;
+            border: 3px solid white;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.35);
+            pointer-events: none;
+        }
+
+        .preview {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-top: 26px;
+            padding: 14px;
+            background: #242832;
+            border-radius: 14px;
+        }
+
+        .preview-color {
+            width: 54px;
+            height: 54px;
+            flex-shrink: 0;
+            border-radius: 12px;
+            background: #ff0000;
+            box-shadow: 0 4px 18px rgba(255, 0, 0, 0.35);
+        }
+
+        .values {
+            text-align: left;
+        }
+
+        .hex {
+            font-size: 1.05rem;
+            font-weight: 600;
+        }
+
+        .rgb {
+            margin-top: 4px;
+            color: #9ca3af;
+            font-family: monospace;
+            font-size: 0.85rem;
+        }
+
+        .status {
+            margin-top: 18px;
+            text-align: center;
+            color: #737b8c;
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+
+<body>
+
+    <main class="page">
+        <h1><span>impl</span> Rust</h1>
+        <p class="subtitle">Running on ESP32-C5</p>
+
+        <section class="card">
+            <h2>Control Onboard RGB LED</h2>
+
+            <div class="palette" id="palette">
+                <div class="pointer" id="pointer"></div>
+            </div>
+
+            <div class="hue" id="hue">
+                <div class="hue-pointer" id="huePointer"></div>
+            </div>
+
+            <div class="preview">
+                <div class="preview-color" id="preview"></div>
+
+                <div class="values">
+                    <div class="hex" id="hex">#FF0000</div>
+                    <div class="rgb" id="rgb">RGB(255, 0, 0)</div>
+                </div>
+            </div>
+
+            <div class="status" id="status">Ready</div>
+        </section>
+    </main>
+
+    <script>
+        const palette = document.getElementById("palette");
+        const pointer = document.getElementById("pointer");
+
+        const hue = document.getElementById("hue");
+        const huePointer = document.getElementById("huePointer");
+
+        const preview = document.getElementById("preview");
+        const hexText = document.getElementById("hex");
+        const rgbText = document.getElementById("rgb");
+        const status = document.getElementById("status");
+
+        let hueValue = 0;
+        let saturation = 1;
+        let lightness = 0.5;
+
+        function updatePalette() {
+            palette.style.background = `
+                linear-gradient(to top, #000, transparent),
+                linear-gradient(
+                    to right,
+                    #fff,
+                    hsl(${hueValue} 100% 50%)
+                )
+            `;
+        }
+
+        function updateColor() {
+            const [r, g, b] = hslToRgb(
+                hueValue / 360,
+                saturation,
+                lightness
+            );
+
+            const hex =
+                "#" +
+                [r, g, b]
+                    .map(value => value.toString(16).padStart(2, "0"))
+                    .join("")
+                    .toUpperCase();
+
+            const color = `rgb(${r}, ${g}, ${b})`;
+
+            preview.style.background = color;
+            preview.style.boxShadow =
+                `0 4px 18px rgba(${r}, ${g}, ${b}, 0.35)`;
+
+            hexText.textContent = hex;
+            rgbText.textContent = `RGB(${r}, ${g}, ${b})`;
+        }
+
+        function selectPalette(event) {
+            const rect = palette.getBoundingClientRect();
+
+            let x = (event.clientX - rect.left) / rect.width;
+            let y = (event.clientY - rect.top) / rect.height;
+
+            x = Math.max(0, Math.min(1, x));
+            y = Math.max(0, Math.min(1, y));
+
+            saturation = x;
+            lightness = 0.5 * (1 - y);
+
+            pointer.style.left = `${x * 100}%`;
+            pointer.style.top = `${y * 100}%`;
+
+            updateColor();
+        }
+
+        function selectHue(event) {
+            const rect = hue.getBoundingClientRect();
+
+            let x = (event.clientX - rect.left) / rect.width;
+            x = Math.max(0, Math.min(1, x));
+
+            hueValue = x * 360;
+
+            huePointer.style.left = `${x * 100}%`;
+
+            updatePalette();
+            updateColor();
+        }
+
+        function getRgb() {
+            return hslToRgb(
+                hueValue / 360,
+                saturation,
+                lightness
+            );
+        }
+
+        async function sendColor() {
+            const [red, green, blue] = getRgb();
+
+            status.textContent = "Updating...";
+
+            try {
+                const response = await fetch("/api/onboard-led", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ red, green, blue })
+                });
+
+                if (!response.ok) {
+                    throw new Error();
+                }
+
+                status.textContent = "LED updated";
+            } catch {
+                status.textContent = "Failed to update LED";
+            }
+        }
+
+        palette.addEventListener("pointerdown", event => {
+            palette.setPointerCapture(event.pointerId);
+            selectPalette(event);
+        });
+
+        palette.addEventListener("pointermove", event => {
+            if (event.buttons) {
+                selectPalette(event);
+            }
+        });
+
+        palette.addEventListener("pointerup", event => {
+            selectPalette(event);
+            sendColor();
+        });
+
+        hue.addEventListener("pointerdown", event => {
+            hue.setPointerCapture(event.pointerId);
+            selectHue(event);
+        });
+
+        hue.addEventListener("pointermove", event => {
+            if (event.buttons) {
+                selectHue(event);
+            }
+        });
+
+        hue.addEventListener("pointerup", event => {
+            selectHue(event);
+            sendColor();
+        });
+
+        function hslToRgb(h, s, l) {
+            let r, g, b;
+
+            if (s === 0) {
+                r = g = b = l;
+            } else {
+                const hue2rgb = (p, q, t) => {
+                    if (t < 0) t += 1;
+                    if (t > 1) t -= 1;
+                    if (t < 1 / 6) return p + (q - p) * 6 * t;
+                    if (t < 1 / 2) return q;
+                    if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+                    return p;
+                };
+
+                const q = l < 0.5
+                    ? l * (1 + s)
+                    : l + s - l * s;
+
+                const p = 2 * l - q;
+
+                r = hue2rgb(p, q, h + 1 / 3);
+                g = hue2rgb(p, q, h);
+                b = hue2rgb(p, q, h - 1 / 3);
+            }
+
+            return [
+                Math.round(r * 255),
+                Math.round(g * 255),
+                Math.round(b * 255)
+            ];
+        }
+
+        updatePalette();
+
+        pointer.style.left = "100%";
+        pointer.style.top = "0%";
+        huePointer.style.left = "0%";
+
+        updateColor();
+    </script>
+
+</body>
+
+</html>
