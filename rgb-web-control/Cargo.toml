@@ -61,7 +61,7 @@ critical-section = "1.2.0"
 static_cell = "2.1.1"
 
 picoserve = { version = "0.20.1", features = ["embassy", "json"] }
-serde = { version = "1.0.229", default-features = false, eatures = ["derive"] }
+serde = { version = "1.0.229", default-features = false, features = ["derive"] }
 esp-hal-smartled = "0.18.0"
 smart-leds = "0.4.0"
 embassy-sync = "0.8.0"
